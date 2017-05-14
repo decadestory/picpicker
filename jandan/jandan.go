@@ -34,11 +34,11 @@ func init() {
 }
 
 //GetNv get meizi
-func GetNv(cnt int) {
+func GetNv(cnt int, skip int) {
 	fmt.Println("开始获取", cnt, "张妹子图")
 	go queryPages("ooxx")
 	go queryImgUrls()
-	go download(cnt, dirNv)
+	go download(cnt, dirNv, skip)
 
 	for item := range downloadCnt {
 		fmt.Println("已经下载完成第" + strconv.Itoa(item) + "张图片")
@@ -52,11 +52,11 @@ func GetNv(cnt int) {
 }
 
 //GetPic get pic
-func GetPic(cnt int) {
+func GetPic(cnt int, skip int) {
 	fmt.Println("开始获取", cnt, "张无聊图")
 	go queryPages("pic")
 	go queryImgUrls()
-	go download(cnt, dirbor)
+	go download(cnt, dirbor, skip)
 
 	for item := range downloadCnt {
 		fmt.Println("已经下载完成第" + strconv.Itoa(item) + "张图片")
@@ -74,7 +74,7 @@ func queryPages(cat string) {
 	for {
 		curl := url + "/" + cat + "/page-" + strconv.Itoa(index) + "#comments"
 		pageUrls <- curl
-		time.Sleep(1 * 1e9)
+		time.Sleep(0.1 * 1e9)
 		index++
 	}
 }
@@ -99,7 +99,7 @@ func queryImgUrls() {
 	}
 }
 
-func download(cnt int, dir string) {
+func download(cnt int, dir string, skip int) {
 	basePath, err := os.Stat("./download/")
 	if err != nil || basePath.IsDir() == false {
 		err := os.Mkdir("./download/", os.ModePerm)
@@ -118,6 +118,11 @@ func download(cnt int, dir string) {
 
 	dlcnt := 1
 	for item := range imgUrls {
+		if dlcnt <= skip {
+			dlcnt++
+			continue
+		}
+
 		fileName := guid.New().String()
 		fileExt := path.Ext(item)
 		filePath := dir + fileName + fileExt
@@ -132,7 +137,7 @@ func download(cnt int, dir string) {
 			panic(err)
 		}
 		io.Copy(f, data.Body)
-		downloadCnt <- dlcnt
+		downloadCnt <- (dlcnt - skip)
 		dlcnt++
 	}
 }
